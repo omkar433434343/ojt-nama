@@ -1,41 +1,35 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-async function parseBody(req) {
-  return new Promise((resolve) => {
-    let body = "";
-    req.on("data", chunk => body += chunk.toString());
-    req.on("end", () => {
-      try { resolve(JSON.parse(body)); } catch { resolve({}); }
-    });
-  });
-}
-
 export default async function handler(req, res) {
-  // Prevent GET crashes
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Use POST only" });
+    return res.status(405).json({ error: "Only POST allowed" });
   }
 
   try {
-    const body = await parseBody(req);
-    const prompt = body?.prompt;
-    if (!prompt) return res.status(400).json({ error: "Prompt missing" });
-
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) return res.status(500).json({ error: "API key missing" });
+    const { prompt } = req.body;
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    if (!apiKey) {
+      return res.status(500).json({ error: "Missing API key in Vercel settings" });
+    }
 
-    const result = await model.generateContent(prompt);
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ]
+        })
+      }
+    );
 
-    const reply =
-      result?.response?.text?.() ||
-      result?.response?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response received";
+    const data = await response.json();
+    return res.status(200).json(data);
 
-    res.status(200).json({ reply });
   } catch (error) {
-    res.status(500).json({ error: String(error) });
+    res.status(500).json({ error: error.message });
   }
 }
