@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             const data = await res.json();
-            aiContent.innerHTML = data.reply || "Sorry, I couldn't find an answer.";
+            aiContent.innerHTML = data.reply || "I couldn't find an answer.";
         } catch (e) {
             aiContent.innerHTML = `<div style="color: #ef4444;">Error: ${e.message}</div>`;
         } finally {
@@ -64,14 +64,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleSearch() {
-        const query = searchInput.value.toLowerCase().trim();
+        const query = searchInput.value.trim().toLowerCase();
         if (!query) return (renderFAQs(staticFAQs), aiContainer.classList.add('hidden'));
 
-        const filtered = staticFAQs.filter(f => f.question.toLowerCase().includes(query) || f.answer.toLowerCase().includes(query));
+        const filtered = staticFAQs.filter(f => 
+            f.question.toLowerCase().includes(query) ||
+            f.answer.toLowerCase().includes(query)
+        );
+
         renderFAQs(filtered);
         fetchAIAnswer(query);
     }
 
     searchBtn.addEventListener('click', handleSearch);
-    searchInput.addEventListener('keypress', e => e.key === 'Enter' && handleSearch());
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleSearch();
+    });
 });
