@@ -1,8 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
+// Utility to read JSON body manually on Vercel functions
+async function parseBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", chunk => {
+      body += chunk.toString();
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (e) {
+        resolve({});
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
 export default async function handler(req, res) {
   try {
-    const { prompt } = req.body;
+    const body = await parseBody(req);
+    const prompt = body?.prompt;
+
     if (!prompt) return res.status(400).json({ error: "Prompt missing" });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -19,6 +39,7 @@ export default async function handler(req, res) {
       "No response received";
 
     res.status(200).json({ reply });
+    
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
